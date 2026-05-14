@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://elm-backend-hmfydpb4gzgggmec.uaenorth-01.azurewebsites.net/api';
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    'https://elm-backend-hmfydpb4gzgggmec.uaenorth-01.azurewebsites.net/api';
 
 // Create axios instance (don't set token here - let AuthContext handle it)
 const api = axios.create({
