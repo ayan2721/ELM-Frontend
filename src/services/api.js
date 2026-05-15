@@ -6,18 +6,32 @@ const DEFAULT_API_BASE_URL =
 
 // Read env variable safely
 const rawApiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL;
+    import.meta.env.VITE_API_BASE_URL?.trim();
 
-// Decide final API base URL
-let API_BASE_URL = DEFAULT_API_BASE_URL;
+const resolveApiBaseUrl = () => {
+    if (!rawApiBaseUrl) {
+        return DEFAULT_API_BASE_URL;
+    }
 
-if (
-    rawApiBaseUrl &&
-    rawApiBaseUrl !== '/api' &&
-    rawApiBaseUrl.indexOf('/api/') !== 0
-) {
-    API_BASE_URL = rawApiBaseUrl;
-}
+    try {
+        const resolvedUrl = new URL(rawApiBaseUrl, window.location.origin);
+
+        // If the env value points at the same static frontend origin and uses /api,
+        // ignore it and fall back to the real backend URL.
+        if (
+            resolvedUrl.origin === window.location.origin &&
+            resolvedUrl.pathname.startsWith('/api')
+        ) {
+            return DEFAULT_API_BASE_URL;
+        }
+
+        return resolvedUrl.toString();
+    } catch (error) {
+        return DEFAULT_API_BASE_URL;
+    }
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 // Create axios instance
 const api = axios.create({
