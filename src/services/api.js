@@ -1,82 +1,112 @@
 import axios from 'axios';
 
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
+// Default backend URL (Azure)
+const DEFAULT_API_BASE_URL =
     'https://elm-backend-hmfydpb4gzgggmec.uaenorth-01.azurewebsites.net/api';
 
-// Create axios instance (don't set token here - let AuthContext handle it)
+// Read env variable safely
+const rawApiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL;
+
+// Decide final API base URL
+let API_BASE_URL = DEFAULT_API_BASE_URL;
+
+if (
+    rawApiBaseUrl &&
+    rawApiBaseUrl !== '/api' &&
+    rawApiBaseUrl.indexOf('/api/') !== 0
+) {
+    API_BASE_URL = rawApiBaseUrl;
+}
+
+// Create axios instance
 const api = axios.create({
     baseURL: API_BASE_URL,
 });
 
-// ✅ Request interceptor: Attach token from localStorage
+// ========================
+// REQUEST INTERCEPTOR
+// ========================
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
+
     config.headers = config.headers || {};
+
     if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        config.headers.Authorization = 'Bearer ' + token;
     }
+
     return config;
 });
 
-// ✅ Response interceptor: Only reject, don't auto-redirect
-// AuthContext will handle logout on invalid token
+// ========================
+// RESPONSE INTERCEPTOR
+// ========================
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Don't redirect here - let the component handle auth errors
-        // This prevents redirect loops during auth flows
+        // No auto redirect here (handled in AuthContext)
         return Promise.reject(error);
     }
 );
 
-// Auth APIs
+// ========================
+// AUTH APIs
+// ========================
 export const authAPI = {
-    login: (credentials) =>
-        api.post('/auth/login', credentials),
+    login: (credentials) => {
+        return api.post('/auth/login', credentials);
+    },
 
-    register: (userData) =>
-        api.post('/auth/register', userData),
+    register: (userData) => {
+        return api.post('/auth/register', userData);
+    },
 };
 
-// Leave APIs
+// ========================
+// LEAVE APIs
+// ========================
 export const leaveAPI = {
     applyLeave: (leaveData) => {
-        // If already FormData, use it directly
+        // If already FormData, send directly
         if (leaveData instanceof FormData) {
             return api.post('/leave/apply', leaveData);
         }
 
-        // Otherwise, wrap in FormData
+        // Convert object to FormData
         const formData = new FormData();
 
-        Object.keys(leaveData).forEach((key) => {
+        for (const key in leaveData) {
             if (
                 leaveData[key] !== null &&
                 leaveData[key] !== undefined
             ) {
                 formData.append(key, leaveData[key]);
             }
-        });
+        }
 
         return api.post('/leave/apply', formData);
     },
 
-    getMyLeaves: () =>
-        api.get('/leave/my'),
+    getMyLeaves: () => {
+        return api.get('/leave/my');
+    },
 
-    getPendingLeaves: () =>
-        api.get('/leave/pending'),
+    getPendingLeaves: () => {
+        return api.get('/leave/pending');
+    },
 
-    approveLeave: (id, comment) =>
-        api.put(`/leave/approve/${id}`, {
+    approveLeave: (id, comment) => {
+        return api.put(`/leave/approve/${id}`, {
             manager_comment: comment,
-        }),
+        });
+    },
 
-    rejectLeave: (id, comment) =>
-        api.put(`/leave/reject/${id}`, {
+    rejectLeave: (id, comment) => {
+        return api.put(`/leave/reject/${id}`, {
             manager_comment: comment,
-        }),
+        });
+    },
 };
 
 export default api;
